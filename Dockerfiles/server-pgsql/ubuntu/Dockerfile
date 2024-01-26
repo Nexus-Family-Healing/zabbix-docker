@@ -10,6 +10,8 @@ FROM ubuntu:jammy
 ARG MAJOR_VERSION
 ARG ZBX_VERSION
 ARG ZBX_SOURCES=https://git.zabbix.com/scm/zbx/zabbix.git
+ARG MSKEYRING=https://packages.microsoft.com/keys/microsoft.asc
+ARG MSSOURCE=https://packages.microsoft.com/config/debian/12/prod.list
 
 ENV TERM=xterm \
     ZBX_VERSION=${ZBX_VERSION} ZBX_SOURCES=${ZBX_SOURCES} \
@@ -39,6 +41,9 @@ COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}/database/postgresql/timescaledb
 
 RUN set -eux && \
     echo "#!/bin/sh\nexit 101" > /usr/sbin/policy-rc.d && \
+    curl -fsSL ${MSKEYRING} | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \
+    curl -fsSL ${MSSOURCE} | tee /etc/apt/sources.list.d/mssql-release.list && \
+    echo msodbcsql18 msodbcsql/ACCEPT_EULA boolean true | debconf-set-selections && \
     INSTALL_PKGS="bash \
             tini \
             traceroute \
@@ -58,6 +63,7 @@ RUN set -eux && \
             libssh-4 \
             libssl3 \
             libxml2 \
+            msodbcsql18 \
             postgresql-client \
             snmp-mibs-downloader \
             unixodbc" && \
